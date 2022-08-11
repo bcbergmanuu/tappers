@@ -2,8 +2,8 @@
 #include <Arduino_FreeRTOS.h>
 #include <semphr.h>
 
-volatile SemaphoreHandle_t interruptSemaphore[8];
-volatile SemaphoreHandle_t sem_led;
+SemaphoreHandle_t interruptSemaphore[8];
+SemaphoreHandle_t sem_led;
 
 static uint8_t tapper_input[8] = {6,7,8,9,10,11,12,13};
 static uint8_t tapper_output[8] = {24,28,32,36,40,44,48,52};
@@ -26,7 +26,7 @@ void taptask(void * pvParameters) {
 }
 
 void checkTask(void * pvParameters) {
-  static volatile int buttonstate[8] = {0,0,0,0,0,0,0,0};  
+  static int buttonstate[8] = {0,0,0,0,0,0,0,0};  
   for(;;) {
     for(int x = 0; x< 8; x++) {
       int signal = digitalRead(tapper_input[x]);
