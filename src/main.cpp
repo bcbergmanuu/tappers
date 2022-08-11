@@ -2,55 +2,79 @@
 #include <Arduino_FreeRTOS.h>
 #include <semphr.h>
 
-SemaphoreHandle_t interruptSemaphore[2];
+volatile SemaphoreHandle_t interruptSemaphore[8];
+volatile SemaphoreHandle_t sem_led;
 
-int tapperout[2] = {16, 14};
-
-int tapper0in = 2; //int1
-int tapper1in = 3; //int0
+static uint8_t tapper_input[8] = {6,7,8,9,10,11,12,13};
+static uint8_t tapper_output[8] = {24,28,32,36,40,44,48,52};
 
 void taptask(void * pvParameters) {
   int tapper = (int)pvParameters;  
   for (;;) {
     if (xSemaphoreTake(interruptSemaphore[tapper], portMAX_DELAY) == pdPASS) {      
-      digitalWrite(tapperout[tapper], HIGH);
-      Serial.println("open");
-      Serial.println(tapper);
+      digitalWrite(tapper_output[tapper], HIGH);
+
       vTaskDelay(20 / portTICK_PERIOD_MS);  
-      digitalWrite(tapperout[tapper], LOW);
+
+      digitalWrite(tapper_output[tapper], LOW);      
       vTaskDelay(500 / portTICK_PERIOD_MS); 
-      Serial.println("cool");
-      Serial.println(tapper);      
+      
+          
     }
-    vTaskDelay(10);
+    vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 }
 
-void tap1interrupt() {  
-  xSemaphoreGiveFromISR(interruptSemaphore[1], NULL);
+void checkTask(void * pvParameters) {
+  static volatile int buttonstate[8] = {0,0,0,0,0,0,0,0};  
+  for(;;) {
+    for(int x = 0; x< 8; x++) {
+      int signal = digitalRead(tapper_input[x]);
+      
+      if(signal != buttonstate[x]) {     
+        
+        xSemaphoreGive(interruptSemaphore[x]);
+        xSemaphoreGive(sem_led);
+        buttonstate[x] = signal;        
+      }
+    }
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
 }
 
-void tap0interrupt() {
-  xSemaphoreGiveFromISR(interruptSemaphore[0], NULL);
+void ledIndicationTask(void * pvParameters) {   
+  for(;;)  {
+    if(xSemaphoreTake(sem_led, portMAX_DELAY) == pdPASS) {
+      for(int x = 0; x< 5; x++) {
+        digitalWrite(3, HIGH);
+        vTaskDelay(100/ portTICK_PERIOD_MS);
+        digitalWrite(3, LOW);
+        vTaskDelay(100 /portTICK_PERIOD_MS);
+      }
+    }
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
 }
 
 void setup()
 {
-  for(int x =0; x< 2; x++) {
-    pinMode(tapperout[x], OUTPUT);     
+  pinMode(3, OUTPUT);
+  for(int x = 0; x< 8; x++ ){
+    pinMode(tapper_input[x], INPUT_PULLUP);
+    pinMode(tapper_output[x], OUTPUT);
+    
     xTaskCreate(taptask, "tap", 128, (void*)x, 0, NULL);
     interruptSemaphore[x] = xSemaphoreCreateBinary();
   }
-  
-  pinMode(tapper0in, INPUT_PULLUP);
-  pinMode(tapper1in, INPUT_PULLUP);
+  sem_led = xSemaphoreCreateBinary();
 
-  Serial.begin(9600); 
 
-  attachInterrupt(digitalPinToInterrupt(tapper0in), tap0interrupt, RISING);
-  attachInterrupt(digitalPinToInterrupt(tapper1in), tap1interrupt, RISING);  
+   xTaskCreate(checkTask, "check", 128, 0, 0, NULL);
+   xTaskCreate(ledIndicationTask, "led", 128, 0, 0, NULL);
+
 }
 
 void loop()
 {    
+  
 }
