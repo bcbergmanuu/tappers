@@ -17,26 +17,25 @@ void taptask(void * pvParameters) {
       vTaskDelay(20 / portTICK_PERIOD_MS);  
 
       digitalWrite(tapper_output[tapper], LOW);      
-      vTaskDelay(500 / portTICK_PERIOD_MS); 
-      
-          
+      vTaskDelay(500 / portTICK_PERIOD_MS);                 
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 }
 
 void checkTask(void * pvParameters) {
-  static int buttonstate[8] = {0,0,0,0,0,0,0,0};  
+  static int buttonstate[8] = {1,1,1,1,1,1,1,1};  
   for(;;) {
     for(int x = 0; x< 8; x++) {
       int signal = digitalRead(tapper_input[x]);
-      
-      if(signal != buttonstate[x]) {     
-        
+      if(signal == 1) {
+        buttonstate[x] = 1;
+      }
+      else if ((signal == 0) && (buttonstate[x] == 1)) {        
         xSemaphoreGive(interruptSemaphore[x]);
         xSemaphoreGive(sem_led);
-        buttonstate[x] = signal;        
-      }
+        buttonstate[x] = 0;        
+      }      
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
@@ -44,13 +43,11 @@ void checkTask(void * pvParameters) {
 
 void ledIndicationTask(void * pvParameters) {   
   for(;;)  {
-    if(xSemaphoreTake(sem_led, portMAX_DELAY) == pdPASS) {
-      for(int x = 0; x< 5; x++) {
-        digitalWrite(3, HIGH);
-        vTaskDelay(100/ portTICK_PERIOD_MS);
+    if(xSemaphoreTake(sem_led, portMAX_DELAY) == pdPASS) {      
         digitalWrite(3, LOW);
-        vTaskDelay(100 /portTICK_PERIOD_MS);
-      }
+        vTaskDelay(100/ portTICK_PERIOD_MS);
+        digitalWrite(3, HIGH);
+        vTaskDelay(100 /portTICK_PERIOD_MS);      
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
