@@ -2,11 +2,15 @@
 #include <Arduino_FreeRTOS.h>
 #include <semphr.h>
 
-SemaphoreHandle_t interruptSemaphore[8];
+
+#define tapper_amount 2
+#define ledpin 15
+static uint8_t tapper_input[tapper_amount] = {2,3};
+static uint8_t tapper_output[tapper_amount] = {14,16};
+SemaphoreHandle_t interruptSemaphore[tapper_amount];
 SemaphoreHandle_t sem_led;
 
-static uint8_t tapper_input[8] = {6,7,8,9,10,11,12,13};
-static uint8_t tapper_output[8] = {24,28,32,36,40,44,48,52};
+
 
 void taptask(void * pvParameters) {
   int tapper = (int)pvParameters;  
@@ -24,9 +28,9 @@ void taptask(void * pvParameters) {
 }
 
 void checkTask(void * pvParameters) {
-  static int buttonstate[8] = {1,1,1,1,1,1,1,1};  
+  static int buttonstate[tapper_amount] = {1,1};  
   for(;;) {
-    for(int x = 0; x< 8; x++) {
+    for(int x = 0; x< tapper_amount; x++) {
       int signal = digitalRead(tapper_input[x]);
       if(signal == 1) {
         buttonstate[x] = 1;
@@ -44,9 +48,9 @@ void checkTask(void * pvParameters) {
 void ledIndicationTask(void * pvParameters) {   
   for(;;)  {
     if(xSemaphoreTake(sem_led, portMAX_DELAY) == pdPASS) {      
-        digitalWrite(3, LOW);
+        digitalWrite(ledpin, LOW);
         vTaskDelay(100/ portTICK_PERIOD_MS);
-        digitalWrite(3, HIGH);
+        digitalWrite(ledpin, HIGH);
         vTaskDelay(100 /portTICK_PERIOD_MS);      
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
@@ -55,8 +59,8 @@ void ledIndicationTask(void * pvParameters) {
 
 void setup()
 {
-  pinMode(3, OUTPUT);
-  for(int x = 0; x< 8; x++ ){
+  pinMode(ledpin, OUTPUT);
+  for(int x = 0; x< tapper_amount; x++ ){
     pinMode(tapper_input[x], INPUT_PULLUP);
     pinMode(tapper_output[x], OUTPUT);
     
