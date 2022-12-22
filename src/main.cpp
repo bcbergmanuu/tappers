@@ -1,11 +1,11 @@
 #include <Arduino.h>
 
-#define tapper_amount 2
+#define tapper_amount 8
 #define time_off 200
 #define time_on 20
 
-static uint8_t tapper_input[tapper_amount] = {2,3};
-static uint8_t tapper_output[tapper_amount] = {14,16};
+static uint8_t tapper_input[tapper_amount] = {6,7,8,9,10,11,12,13};
+static uint8_t tapper_output[tapper_amount] = {24,28,32,36,40,44,48,52};
 
 void setup() {
   for(int x = 0; x< tapper_amount; x++ ){
